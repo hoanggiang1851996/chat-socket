@@ -3,6 +3,9 @@ import { supabase } from '../supabaseClient'
 
 const ONLINE_MS = 40000 // coi là online nếu last_seen trong 40s
 
+// Phòng chat chung: ai cũng thấy, không cần kết bạn
+export const PUBLIC_ROOM = { id: 'public', username: 'Kênh chung', avatar_emoji: '🌐', isRoom: true }
+
 function isOnline(lastSeen) {
   if (!lastSeen) return false
   return Date.now() - new Date(lastSeen).getTime() < ONLINE_MS
@@ -158,6 +161,18 @@ export default function FriendsSidebar({ profile, activeFriend, onSelect, onLogo
           ))}
         </>
       )}
+
+      <div className="section-label">Phòng chung</div>
+      <div
+        className={'friend-item' + (activeFriend?.id === PUBLIC_ROOM.id ? ' active' : '')}
+        onClick={() => onSelect(PUBLIC_ROOM)}
+      >
+        <span className="ava">{PUBLIC_ROOM.avatar_emoji}</span>
+        <div>
+          <div className="name">{PUBLIC_ROOM.username}</div>
+          <div className="sub">Chat với tất cả mọi người</div>
+        </div>
+      </div>
 
       <div className="section-label">Bạn bè</div>
       <div className="friend-list">

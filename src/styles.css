@@ -181,6 +181,7 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,.1);
 }
 .msg-time { font-size: 11px; color: var(--muted); margin: 2px 4px; }
+.msg-author { font-size: 12px; color: var(--muted); margin: 0 4px 2px; font-weight: 600; }
 
 .react-popup {
   position: absolute;

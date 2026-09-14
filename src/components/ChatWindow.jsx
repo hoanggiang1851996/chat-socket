@@ -9,28 +9,32 @@ function timeStr(ts) {
 }
 
 export default function ChatWindow({ me, friend }) {
+  const isRoom = !!friend.isRoom
   const [messages, setMessages] = useState([])
+  const [senders, setSenders] = useState({}) // id -> profile (hiển thị tên trong phòng chung)
   const [text, setText] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [reactFor, setReactFor] = useState(null) // id tin nhắn đang mở popup reaction
   const bottomRef = useRef(null)
 
-  // Tải lịch sử chat giữa me & friend
+  // Tải lịch sử: phòng chung (receiver null) hoặc chat 1-1
   useEffect(() => {
     setMessages([])
     setReactFor(null)
     async function load() {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .or(
+      let q = supabase.from('messages').select('*')
+      if (isRoom) {
+        q = q.is('receiver', null)
+      } else {
+        q = q.or(
           `and(sender.eq.${me.id},receiver.eq.${friend.id}),and(sender.eq.${friend.id},receiver.eq.${me.id})`
         )
-        .order('created_at', { ascending: true })
+      }
+      const { data } = await q.order('created_at', { ascending: true })
       setMessages(data || [])
     }
     load()
-  }, [me.id, friend.id])
+  }, [me.id, friend.id, isRoom])
 
   // Realtime: lắng nghe insert + update messages
   useEffect(() => {
@@ -41,9 +45,10 @@ export default function ChatWindow({ me, friend }) {
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
           const m = payload.new
-          const relevant =
-            (m.sender === me.id && m.receiver === friend.id) ||
-            (m.sender === friend.id && m.receiver === me.id)
+          const relevant = isRoom
+            ? m.receiver === null
+            : (m.sender === me.id && m.receiver === friend.id) ||
+              (m.sender === friend.id && m.receiver === me.id)
           if (relevant) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]))
         }
       )
@@ -57,22 +62,40 @@ export default function ChatWindow({ me, friend }) {
       )
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [me.id, friend.id])
+  }, [me.id, friend.id, isRoom])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Phòng chung: lấy profile của những người đã gửi để hiện tên
+  useEffect(() => {
+    if (!isRoom) return
+    const ids = [...new Set(messages.map((m) => m.sender))].filter((id) => id && !senders[id])
+    if (!ids.length) return
+    let cancelled = false
+    supabase
+      .from('profiles')
+      .select('id, username, avatar_emoji')
+      .in('id', ids)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        setSenders((prev) => ({ ...prev, ...Object.fromEntries(data.map((p) => [p.id, p])) }))
+      })
+    return () => { cancelled = true }
+  }, [messages, isRoom, senders])
 
   async function send() {
     const content = text.trim()
     if (!content) return
     setText('')
     setShowEmoji(false)
+    const receiver = isRoom ? null : friend.id
     // Optimistic update
     const temp = {
       id: 'temp-' + Date.now(),
       sender: me.id,
-      receiver: friend.id,
+      receiver,
       content,
       reaction: null,
       created_at: new Date().toISOString(),
@@ -81,7 +104,7 @@ export default function ChatWindow({ me, friend }) {
 
     const { data, error } = await supabase
       .from('messages')
-      .insert({ sender: me.id, receiver: friend.id, content })
+      .insert({ sender: me.id, receiver, content })
       .select()
       .single()
 
@@ -110,8 +133,14 @@ export default function ChatWindow({ me, friend }) {
       <div className="messages">
         {messages.map((m) => {
           const mine = m.sender === me.id
+          const author = senders[m.sender]
           return (
             <div key={m.id} className={'msg-row ' + (mine ? 'mine' : 'theirs')}>
+              {isRoom && !mine && (
+                <div className="msg-author">
+                  {author ? `${author.avatar_emoji} ${author.username}` : '...'}
+                </div>
+              )}
               <div className="bubble">
                 {m.content}
                 <div

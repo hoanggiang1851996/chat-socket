@@ -25,17 +25,24 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
-  // Lấy profile của user hiện tại
+  // Lấy profile của user hiện tại.
+  // Vừa đăng nhập ẩn danh xong, dòng profile có thể chưa insert kịp,
+  // nên thử lại vài lần cho tới khi thấy profile.
   useEffect(() => {
     if (!session?.user) return
     let cancelled = false
-    async function load() {
+    async function load(attempt = 0) {
       const { data } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .maybeSingle()
-      if (!cancelled) setProfile(data)
+      if (cancelled) return
+      if (data) {
+        setProfile(data)
+      } else if (attempt < 10) {
+        setTimeout(() => load(attempt + 1), 400)
+      }
     }
     load()
     return () => { cancelled = true }
