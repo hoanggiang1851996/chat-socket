@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import ConnectionStatus from './ConnectionStatus'
 
 const EMOJIS = ['🙂', '😎', '🐱', '🐶', '🦊', '🐸', '🦄', '👾', '🤖', '🍕']
 
@@ -40,6 +41,7 @@ export default function Auth() {
 
   return (
     <div className="auth-wrap">
+      <ConnectionStatus />
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1>SupaChat 💬</h1>
         <p className="sub">Nhập biệt danh là chat được ngay</p>
