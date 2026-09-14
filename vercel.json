@@ -3,5 +3,11 @@
   "framework": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "build": {
+    "env": {
+      "VITE_SUPABASE_URL": "https://saneupypzjdkmzrtcgmr.supabase.co",
+      "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhbmV1cHlwempka216cnRjZ21yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzNTMxOTIsImV4cCI6MjEwNDkyOTE5Mn0._jHS90LDysC2JzIFA_CpEoybGyTtNGPepbk59QMK8v4"
+    }
+  },
   "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
