@@ -49,7 +49,23 @@ export default function ChatWindow({ me, friend }) {
             ? m.receiver === null
             : (m.sender === me.id && m.receiver === friend.id) ||
               (m.sender === friend.id && m.receiver === me.id)
-          if (relevant) setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]))
+          if (!relevant) return
+          setMessages((prev) => {
+            // Đã có sẵn (id thật) -> bỏ qua
+            if (prev.some((x) => x.id === m.id)) return prev
+            // Nếu là tin của chính mình, thay thế bản optimistic (temp-) trùng nội dung
+            if (m.sender === me.id) {
+              const idx = prev.findIndex(
+                (x) => String(x.id).startsWith('temp-') && x.content === m.content
+              )
+              if (idx !== -1) {
+                const copy = [...prev]
+                copy[idx] = m
+                return copy
+              }
+            }
+            return [...prev, m]
+          })
         }
       )
       .on(
@@ -109,7 +125,13 @@ export default function ChatWindow({ me, friend }) {
       .single()
 
     if (!error && data) {
-      setMessages((prev) => prev.map((m) => (m.id === temp.id ? data : m)))
+      setMessages((prev) => {
+        // Realtime có thể đã chèn bản thật rồi -> tránh nhân đôi
+        if (prev.some((m) => m.id === data.id)) {
+          return prev.filter((m) => m.id !== temp.id)
+        }
+        return prev.map((m) => (m.id === temp.id ? data : m))
+      })
     }
   }
 
